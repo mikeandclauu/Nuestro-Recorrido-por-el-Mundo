@@ -102,10 +102,16 @@ const modalDeleteBtn = document.querySelector("#modalDeleteBtn");
 const modalEditBtn = document.querySelector("#modalEditBtn");
 
 let memories = [];
+let localMigrationDone = false;
 
-firestore.escucharMemorias((items) => {
+firestore.escucharMemorias(async (items) => {
 
     memories = items;
+
+    if (!localMigrationDone && items.length === 0) {
+        localMigrationDone = true;
+        await migrateLocalMemoriesToFirestore();
+    }
 
     render();
 
@@ -235,29 +241,44 @@ form.addEventListener("submit", async (event) => {
 
         media: [...selectedPhotos],
 
-        favorite:false,
+        favorite: false,
 
         createdAt: Date.now()
 
     };
 
-    if(editingMemoryId){
+    // #region agent log
+    fetch('http://127.0.0.1:7282/ingest/6feb4a61-b90d-4c63-8df7-7b0843eead95',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'00c629'},body:JSON.stringify({sessionId:'00c629',location:'script.js:formSubmit',message:'Form submit started',data:{editingMemoryId,title:memory.title,mediaCount:memory.media.length},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
 
-        memory.firebaseId=editingMemoryId;
+    try {
+        if (editingMemoryId) {
+            memory.firebaseId = editingMemoryId;
+            await firestore.actualizarMemoria(memory);
+        } else {
+            await firestore.guardarMemoria(memory);
+        }
 
-        await service.updateMemory(memory);
-
-    }else{
-
-        await service.addMemory(memory);
-
+        // #region agent log
+        fetch('http://127.0.0.1:7282/ingest/6feb4a61-b90d-4c63-8df7-7b0843eead95',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'00c629'},body:JSON.stringify({sessionId:'00c629',location:'script.js:formSubmit:success',message:'Form submit succeeded',data:{editingMemoryId},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
+    } catch (error) {
+        // #region agent log
+        fetch('http://127.0.0.1:7282/ingest/6feb4a61-b90d-4c63-8df7-7b0843eead95',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'00c629'},body:JSON.stringify({sessionId:'00c629',location:'script.js:formSubmit:error',message:'Form submit failed',data:{code:error?.code,message:error?.message},timestamp:Date.now(),hypothesisId:'D'})}).catch(()=>{});
+        // #endregion
+        console.error("Error guardando momento:", error);
+        alert("No se pudo guardar el momento. Revisa la conexión o las reglas de Firebase.");
+        return;
     }
 
-    editingMemoryId=null;
+    editingMemoryId = null;
+
+    const submitBtn = document.querySelector("#memoryForm .primary-button");
+    if (submitBtn) submitBtn.textContent = "Guardar recuerdo";
 
     form.reset();
 
-    selectedPhotos=[];
+    selectedPhotos = [];
 
     renderPreview();
 
@@ -275,22 +296,31 @@ memoryModal.addEventListener("click", (e) => {
 prevBtn.addEventListener("click", () => navigateCarousel(-1));
 nextBtn.addEventListener("click", () => navigateCarousel(1));
 
-modalFavoriteBtn.addEventListener("click", () => {
+modalFavoriteBtn.addEventListener("click", async () => {
   const memory = memories.find((m) => m.id === currentMemoryId);
-  if (memory) {
-    memory.favorite = !memory.favorite;
-    saveMemories();
+  if (!memory) return;
+  memory.favorite = !memory.favorite;
+  try {
+    await firestore.actualizarMemoria(memory);
     updateModalUI();
     render();
+  } catch (error) {
+    memory.favorite = !memory.favorite;
+    console.error("Error actualizando favorito:", error);
+    alert("No se pudo actualizar el favorito.");
   }
 });
 
-modalDeleteBtn.addEventListener("click", () => {
-  if (confirm("¿Estás seguro de que quieres eliminar este momento?")) {
-    memories = memories.filter((m) => m.id !== currentMemoryId);
-    saveMemories();
+modalDeleteBtn.addEventListener("click", async () => {
+  if (!confirm("¿Estás seguro de que quieres eliminar este momento?")) return;
+  const memory = memories.find((m) => m.id === currentMemoryId);
+  if (!memory) return;
+  try {
+    await firestore.borrarMemoria(memory.firebaseId || memory.id);
     closeModal();
-    render();
+  } catch (error) {
+    console.error("Error eliminando momento:", error);
+    alert("No se pudo eliminar el momento.");
   }
 });
 
@@ -323,7 +353,12 @@ grid.addEventListener("click", (event) => {
 
   if (action === "favorite") {
     memory.favorite = !memory.favorite;
-    saveMemories();
+    firestore.actualizarMemoria(memory).catch((error) => {
+      memory.favorite = !memory.favorite;
+      console.error("Error actualizando favorito:", error);
+      alert("No se pudo actualizar el favorito.");
+      render();
+    });
     updateStats();
     render();
     return;
@@ -331,9 +366,10 @@ grid.addEventListener("click", (event) => {
 
   if (action === "delete") {
     if (confirm("¿Estás seguro de que quieres eliminar este momento?")) {
-      memories = memories.filter((m) => m.id !== memory.id);
-      saveMemories();
-      render();
+      firestore.borrarMemoria(memory.firebaseId || memory.id).catch((error) => {
+        console.error("Error eliminando momento:", error);
+        alert("No se pudo eliminar el momento.");
+      });
     }
     return;
   }
@@ -619,6 +655,28 @@ async function loadMemoriesAsync() {
   }
 
   return [];
+}
+
+async function migrateLocalMemoriesToFirestore() {
+  const localItems = await loadMemoriesAsync();
+  if (!localItems.length) return;
+
+  // #region agent log
+  fetch('http://127.0.0.1:7282/ingest/6feb4a61-b90d-4c63-8df7-7b0843eead95',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'00c629'},body:JSON.stringify({sessionId:'00c629',location:'script.js:migrateLocal',message:'Migrating local memories to Firestore',data:{count:localItems.length},timestamp:Date.now(),hypothesisId:'E'})}).catch(()=>{});
+  // #endregion
+
+  for (const item of localItems) {
+    const { id, firebaseId, ...data } = item;
+    try {
+      await firestore.guardarMemoria({
+        ...data,
+        createdAt: data.createdAt || Date.now(),
+        favorite: Boolean(data.favorite),
+      });
+    } catch (error) {
+      console.error("Error migrando momento local:", error);
+    }
+  }
 }
 
 function loadMemories() {
