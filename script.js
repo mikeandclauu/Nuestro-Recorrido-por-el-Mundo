@@ -1,3 +1,4 @@
+import * as firestore from "./firestore.js";
 const STORAGE_KEY = "our-memory-garden-v3";
 const STORAGE_MIGRATION_KEY = "our-memory-garden";
 const STORAGE_BACKUP_KEY = "our-memory-garden-backup-v3";
@@ -100,18 +101,19 @@ const modalDownloadBtn = document.querySelector("#modalDownloadBtn");
 const modalDeleteBtn = document.querySelector("#modalDeleteBtn");
 const modalEditBtn = document.querySelector("#modalEditBtn");
 
-let memories = loadMemories();
-// Si loadMemories() devuelve [], intentamos cargar desde IndexedDB de forma async.
-// Así evitamos el problema de "refresco y queda vacío".
-loadMemoriesAsync().then((items) => {
-  if (Array.isArray(items) && items.length) {
-    memories = items;
-    render();
-    updateStats();
-  }
-});
-render();
+let memories = [];
 
+firestore.escucharMemorias((items) => {
+
+    memories = items;
+
+    render();
+
+    updateStats();
+
+});
+
+render();
 
 let selectedPhotos = [];
 let currentAccessQuestion = 0;
@@ -212,86 +214,54 @@ clearPhotoButton.addEventListener("click", () => {
   document.querySelector("#previewList").innerHTML = "";
 });
 
-form.addEventListener("submit", (event) => {
-  event.preventDefault();
-  const data = new FormData(form);
+form.addEventListener("submit", async (event) => {
 
-  const title = data.get("title").trim();
-  let startDate = data.get("startDate");
-  let endDate = data.get("endDate");
-  const note = data.get("note").trim();
+    event.preventDefault();
 
-  // Normalizar entrada a YYYY-MM-DD (normalmente viene ya así por inputs type="date")
-  startDate = normalizeDDMMYYYYToISO(startDate);
-  endDate = normalizeDDMMYYYYToISO(endDate);
+    const data = new FormData(form);
 
-  // Si el navegador devuelve YYYY-MM-DD, normalizeDDMMYYYYToISO ya lo conserva.
+    let startDate = normalizeDDMMYYYYToISO(data.get("startDate"));
+    let endDate = normalizeDDMMYYYYToISO(data.get("endDate"));
 
+    const memory = {
 
-  // Validación simple: fin >= inicio (si ambos existen)
-  if (startDate && endDate) {
-    const s = new Date(`${startDate}T00:00:00`);
-    const e = new Date(`${endDate}T00:00:00`);
-    if (!Number.isNaN(s.getTime()) && !Number.isNaN(e.getTime()) && e.getTime() < s.getTime()) {
-      alert("La fecha de fin no puede ser anterior a la fecha de inicio.");
-      return;
-    }
-  }
+        title: data.get("title").trim(),
 
-  let isEdit = Boolean(editingMemoryId);
-
-  if (editingMemoryId) {
-    const editingId = editingMemoryId;
-    memories = memories.map((m) => {
-      if (m.id !== editingId) return m;
-      return {
-        ...m,
-        title,
         startDate,
+
         endDate,
-        note,
+
+        note: data.get("note").trim(),
+
         media: [...selectedPhotos],
-        photo: undefined,
-        mood: undefined,
-      };
 
-    });
-  } else {
-    memories.unshift({
-      id: crypto.randomUUID(),
-      title,
-      startDate,
-      endDate,
-      note,
-      media: [...selectedPhotos],
-      photo: undefined,
-      mood: undefined,
-      favorite: false,
-      createdAt: new Date().toISOString(),
-    });
+        favorite:false,
 
-  }
+        createdAt: Date.now()
 
-  editingMemoryId = null;
-  saveMemories();
+    };
 
-  // Render inmediato para que se vea al instante
-  render();
+    if(editingMemoryId){
 
-  // Confirmación obligatoria
-  setTimeout(() => {
-    alert("Los cambios se han realizado correctamente");
-  }, 0);
+        memory.firebaseId=editingMemoryId;
 
+        await service.updateMemory(memory);
 
-  // Limpiar formulario después del render/alert
-  form.reset();
+    }else{
 
-  startDateInput.valueAsDate = new Date();
-  endDateInput.valueAsDate = new Date();
-  clearPhotoButton.click();
+        await service.addMemory(memory);
+
+    }
+
+    editingMemoryId=null;
+
+    form.reset();
+
+    selectedPhotos=[];
+
+    renderPreview();
+
 });
-
 
 searchInput.addEventListener("input", render);
 filterInput.addEventListener("change", render);
