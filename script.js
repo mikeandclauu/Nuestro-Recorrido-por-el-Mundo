@@ -1,5 +1,5 @@
 import * as firestore from "./firestore.js";
-import { getMediaSrc } from "./storage.js";
+import { getMediaSrc, formatSaveError } from "./storage.js";
 const STORAGE_KEY = "our-memory-garden-v3";
 const STORAGE_MIGRATION_KEY = "our-memory-garden";
 const STORAGE_BACKUP_KEY = "our-memory-garden-backup-v3";
@@ -105,20 +105,41 @@ const modalEditBtn = document.querySelector("#modalEditBtn");
 let memories = [];
 let localMigrationDone = false;
 
-firestore.escucharMemorias(async (items) => {
+function showFirebaseBanner(message) {
+  let banner = document.querySelector("#firebaseBanner");
+  if (!banner) {
+    banner = document.createElement("div");
+    banner.id = "firebaseBanner";
+    banner.style.cssText =
+      "position:fixed;top:0;left:0;right:0;z-index:9999;background:#7f1d1d;color:#fff;padding:12px 16px;font:500 14px/1.4 Inter,sans-serif;text-align:center;";
+    document.body.prepend(banner);
+  }
+  banner.textContent = message;
+}
+
+if (window.location.protocol === "file:") {
+  showFirebaseBanner(
+    "Abre la web con un servidor local (no como archivo). En la carpeta del proyecto: python -m http.server 8765 y entra en http://localhost:8765"
+  );
+}
+
+firestore.escucharMemorias(
+  async (items) => {
+    const banner = document.querySelector("#firebaseBanner");
+    if (banner) banner.remove();
 
     memories = items;
 
     if (!localMigrationDone && items.length === 0) {
-        localMigrationDone = true;
-        await migrateLocalMemoriesToFirestore();
+      localMigrationDone = true;
+      await migrateLocalMemoriesToFirestore();
     }
 
     render();
-
     updateStats();
-
-});
+  },
+  (message) => showFirebaseBanner(message)
+);
 
 render();
 
@@ -261,7 +282,7 @@ form.addEventListener("submit", async (event) => {
         }
     } catch (error) {
         console.error("Error guardando momento:", error);
-        alert("No se pudo guardar el momento. Revisa la conexión o las reglas de Firebase.");
+        alert(error.userMessage || formatSaveError(error));
         if (submitBtn) submitBtn.disabled = false;
         return;
     }

@@ -12,11 +12,11 @@ import {
     orderBy
 } from "./firebase.js";
 
-import { prepareMediaForSave, deleteMemoryMedia } from "./storage.js";
+import { prepareMediaForSave, deleteMemoryMedia, formatSaveError } from "./storage.js";
 
 const memoriesRef = collection(db, "memories");
 
-export function escucharMemorias(callback) {
+export function escucharMemorias(callback, onError) {
     const q = query(memoriesRef, orderBy("createdAt", "desc"));
 
     return onSnapshot(
@@ -36,6 +36,7 @@ export function escucharMemorias(callback) {
         },
         (error) => {
             console.error("Error escuchando memorias:", error);
+            onError?.(formatSaveError(error));
         }
     );
 }
@@ -53,16 +54,40 @@ export async function obtenerMemoria(memoryId) {
 
 export async function guardarMemoria(memory) {
     const { firebaseId, id, media, ...metadata } = memory;
+    const mediaItems = media || [];
 
-    const docRef = await addDoc(memoriesRef, {
-        ...metadata,
-        media: []
-    });
+    if (!mediaItems.length) {
+        try {
+            const docRef = await addDoc(memoriesRef, { ...metadata, media: [] });
+            return docRef.id;
+        } catch (error) {
+            error.userMessage = formatSaveError(error);
+            throw error;
+        }
+    }
 
-    const preparedMedia = await prepareMediaForSave(media || [], docRef.id);
-    await updateDoc(docRef, { media: preparedMedia });
+    let docRef;
+    try {
+        docRef = await addDoc(memoriesRef, {
+            ...metadata,
+            media: []
+        });
 
-    return docRef.id;
+        const preparedMedia = await prepareMediaForSave(mediaItems, docRef.id);
+        await updateDoc(docRef, { media: preparedMedia });
+
+        return docRef.id;
+    } catch (error) {
+        if (docRef?.id) {
+            try {
+                await deleteDoc(doc(db, "memories", docRef.id));
+            } catch {
+                // ignore cleanup errors
+            }
+        }
+        error.userMessage = formatSaveError(error);
+        throw error;
+    }
 }
 
 export async function actualizarMemoria(memory) {
@@ -70,8 +95,13 @@ export async function actualizarMemoria(memory) {
     const { firebaseId: _fid, id: _id, media, ...metadata } = memory;
     const reference = doc(db, "memories", firebaseId);
 
-    const preparedMedia = await prepareMediaForSave(media || [], firebaseId);
-    await updateDoc(reference, { ...metadata, media: preparedMedia });
+    try {
+        const preparedMedia = await prepareMediaForSave(media || [], firebaseId);
+        await updateDoc(reference, { ...metadata, media: preparedMedia });
+    } catch (error) {
+        error.userMessage = formatSaveError(error);
+        throw error;
+    }
 }
 
 export async function borrarMemoria(firebaseId) {
