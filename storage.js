@@ -161,6 +161,19 @@ export async function prepareMediaForSave(mediaItems, memoryId) {
             continue;
         }
 
+        if (
+            typeof item.data === "string" &&
+            item.data.startsWith("data:") &&
+            !(item.file instanceof Blob)
+        ) {
+            prepared.push({
+                type: item.type,
+                data: item.data,
+                name: item.name || ""
+            });
+            continue;
+        }
+
         if (!item.data && !(item.file instanceof Blob)) {
             continue;
         }

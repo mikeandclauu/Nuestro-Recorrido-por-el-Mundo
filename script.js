@@ -167,6 +167,11 @@ async function handleMemorySubmit(event) {
 
   try {
     if (editingMemoryId) {
+      const existing = memories.find((m) => m.id === editingMemoryId);
+      if (existing) {
+        memory.favorite = Boolean(existing.favorite);
+        memory.createdAt = existing.createdAt ?? Date.now();
+      }
       memory.firebaseId = editingMemoryId;
       await firestore.actualizarMemoria(memory);
     } else {
