@@ -7,11 +7,21 @@ import {
     updateDoc,
     deleteDoc,
     doc,
+    getDoc,
     getDocs,
     onSnapshot,
     query,
     orderBy
 } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+
+import {
+    getStorage,
+    ref,
+    uploadBytes,
+    getDownloadURL,
+    deleteObject,
+    listAll
+} from "https://www.gstatic.com/firebasejs/12.5.0/firebase-storage.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyAfps2qE1a_kRrWnUH1eXMHfUYD7Wtt3HI",
@@ -25,6 +35,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 export const db = getFirestore(app);
+export const storage = getStorage(app);
 
 export {
     collection,
@@ -32,8 +43,14 @@ export {
     updateDoc,
     deleteDoc,
     doc,
+    getDoc,
     getDocs,
     onSnapshot,
     query,
-    orderBy
+    orderBy,
+    ref,
+    uploadBytes,
+    getDownloadURL,
+    deleteObject,
+    listAll
 };

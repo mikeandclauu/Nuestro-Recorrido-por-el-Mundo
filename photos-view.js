@@ -1,6 +1,11 @@
-const VIEW_KEY = "photo-view-state";
+import { obtenerMemoria } from "./firestore.js";
+import { getMediaSrc } from "./storage.js";
 
-function loadState() {
+const VIEW_KEY = "photo-view-state";
+let currentIndex = 0;
+let viewState = null;
+
+function loadLegacyState() {
   try {
     return JSON.parse(localStorage.getItem(VIEW_KEY) || "null");
   } catch {
@@ -25,35 +30,26 @@ function formatDateRange(start, end) {
 }
 
 function setSlide(index) {
-  const state = loadState();
-  if (!state || !Array.isArray(state.media) || !state.media.length) return;
+  if (!viewState || !Array.isArray(viewState.media) || !viewState.media.length) return;
 
   const slides = document.querySelectorAll("#photoCarouselContainer .carousel-slide");
   const indicators = document.querySelectorAll("#photoIndicators .carousel-indicator");
   if (!slides.length) return;
 
   const total = slides.length;
-  const nextIndex = (index + total) % total;
+  currentIndex = (index + total) % total;
 
   slides.forEach((slide, i) => {
-    slide.style.display = i === nextIndex ? "flex" : "none";
+    slide.style.display = i === currentIndex ? "flex" : "none";
   });
 
   indicators.forEach((indicator, i) => {
-    indicator.classList.toggle("active", i === nextIndex);
+    indicator.classList.toggle("active", i === currentIndex);
   });
-
-  state.currentIndex = nextIndex;
-  localStorage.setItem(VIEW_KEY, JSON.stringify(state));
 }
 
-function init() {
-  const state = loadState();
-  if (!state || !Array.isArray(state.media) || !state.media.length) {
-    document.body.innerHTML =
-      '<p style="padding:24px;font-family:Inter;">No hay contenido para mostrar.</p>';
-    return;
-  }
+function renderView(state) {
+  viewState = state;
 
   document.getElementById("photoViewTitle").textContent = state.title || "";
   document.getElementById("photoViewDate").textContent = formatDateRange(
@@ -71,15 +67,16 @@ function init() {
     div.className = "carousel-slide";
     div.style.display = index === 0 ? "flex" : "none";
 
+    const src = getMediaSrc(item);
     if (item.type === "video") {
       const video = document.createElement("video");
-      video.src = item.data;
+      video.src = src;
       video.controls = true;
       video.style.objectFit = "contain";
       div.appendChild(video);
     } else {
       const img = document.createElement("img");
-      img.src = item.data;
+      img.src = src;
       img.alt = "Media";
       img.style.objectFit = "contain";
       div.appendChild(img);
@@ -95,36 +92,73 @@ function init() {
     indicatorsContainer.appendChild(indicator);
   });
 
-  const prevBtn = document.getElementById("photoPrevBtn");
-  const nextBtn = document.getElementById("photoNextBtn");
-
-  prevBtn.addEventListener("click", () => {
-    const st = loadState();
-    if (!st) return;
-    setSlide(st.currentIndex - 1);
-  });
-
-  nextBtn.addEventListener("click", () => {
-    const st = loadState();
-    if (!st) return;
-    setSlide(st.currentIndex + 1);
-  });
-
-  document.getElementById("photoViewClose").addEventListener("click", () => {
-    localStorage.removeItem(VIEW_KEY);
-    window.location.href = "index.html";
-  });
-
-  document.getElementById("photoViewBackdrop").addEventListener("click", () => {
-    localStorage.removeItem(VIEW_KEY);
-    window.location.href = "index.html";
-  });
-
-  // Restaurar slide guardado
+  currentIndex = 0;
   if (typeof state.currentIndex === "number") {
     setSlide(state.currentIndex);
   }
 }
 
-document.addEventListener("DOMContentLoaded", init);
+function showEmptyMessage() {
+  document.body.innerHTML =
+    '<p style="padding:24px;font-family:Inter;">No hay contenido para mostrar.</p>';
+}
 
+async function loadStateFromFirestore(memoryId) {
+  const memory = await obtenerMemoria(memoryId);
+  if (!memory) return null;
+
+  const media = memory.media || (memory.photo ? [{ type: "image", data: memory.photo }] : []);
+  if (!media.length) return null;
+
+  return {
+    title: memory.title,
+    startDate: memory.startDate,
+    endDate: memory.endDate,
+    media,
+    currentIndex: 0
+  };
+}
+
+async function init() {
+  const params = new URLSearchParams(window.location.search);
+  const memoryId = params.get("id");
+
+  let state = null;
+
+  if (memoryId) {
+    try {
+      state = await loadStateFromFirestore(memoryId);
+    } catch (error) {
+      console.error("Error cargando momento:", error);
+    }
+  }
+
+  if (!state) {
+    state = loadLegacyState();
+  }
+
+  if (!state || !Array.isArray(state.media) || !state.media.length) {
+    showEmptyMessage();
+    return;
+  }
+
+  renderView(state);
+
+  document.getElementById("photoPrevBtn").addEventListener("click", () => {
+    setSlide(currentIndex - 1);
+  });
+
+  document.getElementById("photoNextBtn").addEventListener("click", () => {
+    setSlide(currentIndex + 1);
+  });
+
+  const goBack = () => {
+    localStorage.removeItem(VIEW_KEY);
+    window.location.href = "index.html";
+  };
+
+  document.getElementById("photoViewClose").addEventListener("click", goBack);
+  document.getElementById("photoViewBackdrop").addEventListener("click", goBack);
+}
+
+document.addEventListener("DOMContentLoaded", init);

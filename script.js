@@ -1,4 +1,5 @@
 import * as firestore from "./firestore.js";
+import { getMediaSrc } from "./storage.js";
 const STORAGE_KEY = "our-memory-garden-v3";
 const STORAGE_MIGRATION_KEY = "our-memory-garden";
 const STORAGE_BACKUP_KEY = "our-memory-garden-backup-v3";
@@ -166,8 +167,9 @@ photoInput.addEventListener("change", async (event) => {
   for (const file of files) {
     const dataUrl = await readFileAsDataUrl(file);
     selectedPhotos.push({
-      type: file.type.startsWith('video/') ? 'video' : 'image',
+      type: file.type.startsWith("video/") ? "video" : "image",
       data: dataUrl,
+      file,
       name: file.name
     });
   }
@@ -182,16 +184,16 @@ function renderPreview() {
     const div = document.createElement("div");
     div.className = "preview-item";
     
-    if (media.type === 'video') {
+    if (media.type === "video") {
       const video = document.createElement("video");
-      video.src = media.data;
+      video.src = getMediaSrc(media);
       video.style.maxWidth = "150px";
       video.style.maxHeight = "150px";
       video.controls = true;
       div.appendChild(video);
     } else {
       const img = document.createElement("img");
-      img.src = media.data;
+      img.src = getMediaSrc(media);
       img.alt = `Vista previa ${index + 1}`;
       img.style.maxWidth = "150px";
       img.style.maxHeight = "150px";
@@ -247,9 +249,8 @@ form.addEventListener("submit", async (event) => {
 
     };
 
-    // #region agent log
-    fetch('http://127.0.0.1:7282/ingest/6feb4a61-b90d-4c63-8df7-7b0843eead95',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'00c629'},body:JSON.stringify({sessionId:'00c629',location:'script.js:formSubmit',message:'Form submit started',data:{editingMemoryId,title:memory.title,mediaCount:memory.media.length},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
+    const submitBtn = document.querySelector("#memoryForm .primary-button");
+    if (submitBtn) submitBtn.disabled = true;
 
     try {
         if (editingMemoryId) {
@@ -258,18 +259,14 @@ form.addEventListener("submit", async (event) => {
         } else {
             await firestore.guardarMemoria(memory);
         }
-
-        // #region agent log
-        fetch('http://127.0.0.1:7282/ingest/6feb4a61-b90d-4c63-8df7-7b0843eead95',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'00c629'},body:JSON.stringify({sessionId:'00c629',location:'script.js:formSubmit:success',message:'Form submit succeeded',data:{editingMemoryId},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
     } catch (error) {
-        // #region agent log
-        fetch('http://127.0.0.1:7282/ingest/6feb4a61-b90d-4c63-8df7-7b0843eead95',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'00c629'},body:JSON.stringify({sessionId:'00c629',location:'script.js:formSubmit:error',message:'Form submit failed',data:{code:error?.code,message:error?.message},timestamp:Date.now(),hypothesisId:'D'})}).catch(()=>{});
-        // #endregion
         console.error("Error guardando momento:", error);
         alert("No se pudo guardar el momento. Revisa la conexión o las reglas de Firebase.");
+        if (submitBtn) submitBtn.disabled = false;
         return;
     }
+
+    if (submitBtn) submitBtn.disabled = false;
 
     editingMemoryId = null;
 
@@ -393,6 +390,7 @@ function fillFormForEdit(memory) {
   selectedPhotos = getMemoryMedia(memory).map((m) => ({
     type: m.type,
     data: m.data,
+    url: m.url,
     name: m.name || ""
   }));
 
@@ -436,9 +434,9 @@ function render() {
       mediaContainer.className = "media-container";
       
       media.forEach((item) => {
-        if (item.type === 'video') {
-    const video = document.createElement("video");
-          video.src = item.data;
+        if (item.type === "video") {
+          const video = document.createElement("video");
+          video.src = getMediaSrc(item);
           video.controls = true;
           video.style.width = "100%";
           video.style.height = "100%";
@@ -446,7 +444,7 @@ function render() {
           mediaContainer.appendChild(video);
         } else {
           const image = document.createElement("img");
-          image.src = item.data;
+          image.src = getMediaSrc(item);
           image.alt = memory.title;
           mediaContainer.appendChild(image);
         }
@@ -661,10 +659,6 @@ async function migrateLocalMemoriesToFirestore() {
   const localItems = await loadMemoriesAsync();
   if (!localItems.length) return;
 
-  // #region agent log
-  fetch('http://127.0.0.1:7282/ingest/6feb4a61-b90d-4c63-8df7-7b0843eead95',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'00c629'},body:JSON.stringify({sessionId:'00c629',location:'script.js:migrateLocal',message:'Migrating local memories to Firestore',data:{count:localItems.length},timestamp:Date.now(),hypothesisId:'E'})}).catch(()=>{});
-  // #endregion
-
   for (const item of localItems) {
     const { id, firebaseId, ...data } = item;
     try {
@@ -876,9 +870,9 @@ function renderCarousel(memory) {
     div.className = "carousel-slide";
     div.style.display = index === 0 ? "flex" : "none";
     
-    if (item.type === 'video') {
+    if (item.type === "video") {
       const video = document.createElement("video");
-      video.src = item.data;
+      video.src = getMediaSrc(item);
       video.controls = true;
       video.style.width = "100%";
       video.style.height = "100%";
@@ -886,7 +880,7 @@ function renderCarousel(memory) {
       div.appendChild(video);
     } else {
       const img = document.createElement("img");
-      img.src = item.data;
+      img.src = getMediaSrc(item);
       img.alt = "Moment media";
       img.style.width = "100%";
       img.style.height = "100%";
@@ -945,19 +939,9 @@ function getMemoryMedia(memory) {
 }
 
 function openPhotoView(memory) {
-  const VIEW_KEY = "photo-view-state";
   const media = getMemoryMedia(memory);
   if (!media.length) return;
-
-  const payload = {
-    title: memory.title,
-    startDate: memory.startDate,
-    endDate: memory.endDate,
-    media,
-    currentIndex: 0,
-  };
-  localStorage.setItem(VIEW_KEY, JSON.stringify(payload));
-  window.location.href = "photos-view.html";
+  window.location.href = `photos-view.html?id=${encodeURIComponent(memory.id)}`;
 }
 
 function downloadMemoryMedia() {
@@ -969,7 +953,7 @@ function downloadMemoryMedia() {
   media.forEach((item, index) => {
     const link = document.createElement("a");
     const ext = item.type === 'video' ? 'mp4' : 'jpg';
-    link.href = item.data;
+    link.href = getMediaSrc(item);
     link.download = `${memory.title}-${index + 1}.${ext}`;
     link.click();
   });
