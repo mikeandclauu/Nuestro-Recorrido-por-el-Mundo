@@ -223,17 +223,7 @@ export async function prepareMediaForSave(mediaItems, memoryId) {
             continue;
         }
 
-        if (item.file instanceof Blob) {
-            pendingInline.push(item);
-            continue;
-        }
-
-        try {
-            const uploaded = await uploadMediaItem(item, memoryId, i);
-            prepared.push(uploaded);
-        } catch {
-            pendingInline.push(item);
-        }
+        pendingInline.push(item);
     }
 
     if (pendingInline.length) {
