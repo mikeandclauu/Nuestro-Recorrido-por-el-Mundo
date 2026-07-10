@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-label="Moonlit romantic garden with flowers and lights">
+  <defs>
+    <linearGradient id="sky" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#31253a"/>
+      <stop offset=".45" stop-color="#7b3d58"/>
+      <stop offset="1" stop-color="#f0a06d"/>
+    </linearGradient>
+    <linearGradient id="field" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" stop-color="#334b3d"/>
+      <stop offset=".52" stop-color="#677d55"/>
+      <stop offset="1" stop-color="#b88458"/>
+    </linearGradient>
+    <radialGradient id="moon" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#fff8dc"/>
+      <stop offset=".58" stop-color="#ffe9a8"/>
+      <stop offset="1" stop-color="#ffe9a8" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="soft">
+      <feGaussianBlur stdDeviation="8"/>
+    </filter>
+  </defs>
+  <rect width="1600" height="900" fill="url(#sky)"/>
+  <circle cx="1190" cy="145" r="122" fill="url(#moon)" opacity=".92"/>
+  <path d="M0 560 C210 500 302 634 514 570 C738 502 830 445 1044 520 C1254 594 1398 454 1600 520 L1600 900 L0 900 Z" fill="url(#field)"/>
+  <path d="M0 648 C244 604 388 716 610 652 C828 589 1000 610 1190 672 C1346 724 1478 638 1600 610 L1600 900 L0 900 Z" fill="#25372f" opacity=".68"/>
+  <path d="M174 574 C234 384 330 324 470 300 C390 366 364 470 390 590 Z" fill="#24392f" opacity=".78"/>
+  <path d="M1214 566 C1268 392 1372 328 1518 294 C1434 374 1414 484 1448 594 Z" fill="#2c3f34" opacity=".72"/>
+  <g opacity=".82" stroke="#f8d49a" stroke-width="5" stroke-linecap="round" fill="none">
+    <path d="M210 314 C418 246 612 236 806 282 C1002 328 1158 300 1372 224"/>
+    <path d="M248 330 C454 282 624 284 802 326 C998 374 1168 344 1338 280" opacity=".5"/>
+  </g>
+  <g fill="#ffe4a8">
+    <circle cx="302" cy="292" r="13"/>
+    <circle cx="468" cy="260" r="10"/>
+    <circle cx="642" cy="266" r="12"/>
+    <circle cx="820" cy="286" r="11"/>
+    <circle cx="996" cy="326" r="13"/>
+    <circle cx="1168" cy="306" r="10"/>
+    <circle cx="1334" cy="244" r="14"/>
+  </g>
+  <g filter="url(#soft)" opacity=".34">
+    <circle cx="238" cy="288" r="44" fill="#ffd8a0"/>
+    <circle cx="740" cy="288" r="52" fill="#ffd8a0"/>
+    <circle cx="1126" cy="314" r="48" fill="#ffd8a0"/>
+    <circle cx="1338" cy="244" r="58" fill="#ffd8a0"/>
+  </g>
+  <g fill="#f7c2c8" opacity=".95">
+    <circle cx="138" cy="732" r="20"/>
+    <circle cx="182" cy="704" r="15"/>
+    <circle cx="326" cy="752" r="19"/>
+    <circle cx="912" cy="742" r="21"/>
+    <circle cx="1008" cy="706" r="14"/>
+    <circle cx="1314" cy="734" r="22"/>
+    <circle cx="1464" cy="690" r="16"/>
+  </g>
+  <g fill="#f2a36f" opacity=".9">
+    <circle cx="74" cy="794" r="12"/>
+    <circle cx="454" cy="716" r="15"/>
+    <circle cx="698" cy="772" r="13"/>
+    <circle cx="1104" cy="796" r="17"/>
+    <circle cx="1542" cy="760" r="14"/>
+  </g>
+  <g fill="#fff7ed" opacity=".78">
+    <path d="M562 642 C594 590 654 588 680 638 C706 588 766 590 798 642 C830 696 760 746 680 796 C600 746 530 696 562 642 Z"/>
+  </g>
+  <path d="M0 870 C290 812 484 872 702 840 C1012 794 1242 822 1600 768 L1600 900 L0 900 Z" fill="#162a26" opacity=".62"/>
+</svg>

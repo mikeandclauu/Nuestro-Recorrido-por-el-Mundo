@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Galería de fotos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="photo-view-modal" id="photoViewModal" role="dialog" aria-modal="true">
+      <div class="photo-view-backdrop" id="photoViewBackdrop"></div>
+
+      <div class="photo-view-container">
+        <button class="modal-close" id="photoViewClose" type="button" aria-label="Cerrar">✕</button>
+
+        <div class="photo-view-carousel">
+          <button class="carousel-nav carousel-prev" id="photoPrevBtn" type="button" aria-label="Anterior">❮</button>
+          <div class="carousel-container" id="photoCarouselContainer"></div>
+          <button class="carousel-nav carousel-next" id="photoNextBtn" type="button" aria-label="Siguiente">❯</button>
+          <div class="carousel-indicators" id="photoIndicators"></div>
+        </div>
+
+        <div class="photo-view-footer">
+          <div class="photo-view-meta">
+            <h2 id="photoViewTitle"></h2>
+            <p id="photoViewDate"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="photos-view.js"></script>
+
+  </body>
+</html>
+

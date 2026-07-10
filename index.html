@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nuestro Jardín de Recuerdos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="is-locked">
+    <section class="access-gate" id="accessGate" aria-labelledby="accessTitle">
+      <div class="access-backdrop"></div>
+      
+      <div class="access-container">
+        <div class="access-welcome" id="welcomeSection">
+          <div class="welcome-content">
+            <p class="eyebrow welcome-eyebrow">Bienvenida a nuestro espacio</p>
+            <h1 class="welcome-title">Nuestro Jardín de Recuerdos</h1>
+            <p class="welcome-subtitle">
+              Un espacio privado lleno de momentos especiales y recuerdos.
+            </p>
+            <p class="welcome-description">
+              Para acceder a la página web, primero deberás responder algunas preguntas especiales.
+            </p>
+            <button class="primary-button welcome-button" type="button" onclick="document.getElementById('welcomeSection').classList.add('is-hidden'); document.getElementById('accessForm').classList.remove('is-hidden');">
+              Comenzar
+            </button>
+          </div>
+          <div class="welcome-media">
+            <!-- IMAGEN 1: Reemplaza 'assets/romantic-garden.svg' con la ruta de tu primera imagen -->
+            <img src="assets/Imagen_1.jpeg" alt="You And I" />
+          </div>
+        </div>
+
+        <form class="access-panel is-hidden" id="accessForm">
+          <div class="access-panel-inner">
+            <button class="back-button" type="button" onclick="document.getElementById('welcomeSection').classList.remove('is-hidden'); document.getElementById('accessForm').classList.add('is-hidden');">
+              ← Atrás
+            </button>
+            <div class="access-image-frame">
+              <!-- IMAGEN 2: Reemplaza 'assets/romantic-garden.svg' con la ruta de tu segunda imagen -->
+              <img src="assets/Imagen_2.jpeg" alt="You And I" />
+            </div>
+            <p class="eyebrow">Verificación de acceso</p>
+            <h2 id="accessTitle">Responde estas preguntas especiales</h2>
+            <p>
+              Solo tú (y yo) sabemos las respuestas a estas preguntas. ¡Adelante!
+            </p>
+            <div class="access-progress" id="accessProgress"></div>
+            <div class="access-questions" id="accessQuestions"></div>
+            <p class="access-error" id="accessError" role="alert" aria-live="polite"></p>
+            <button class="primary-button" type="submit">Verificar respuesta</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <main class="app-shell">
+      <section class="hero" aria-label="Introducción del jardín de recuerdos">
+        <div class="hero-media" aria-hidden="true">
+          <img src="assets/Imagen_2.jpeg" alt="You And I" />
+        </div>
+          <div class="hero-copy">
+          <p class="eyebrow">Momentos que perduran</p>
+          <h1>Nuestro Álbum</h1>
+          <p>
+            Cada momento compartido, cada risa, cada beso... merece vivir para siempre en nuestro corazón. Aquí guardamos lo más bonito de nosotros.
+          </p>
+        </div>
+        <div class="hero-stats" aria-label="Estadisticas de recuerdos">
+          <div>
+            <strong id="memoryCount">0</strong>
+            <span>momentos</span>
+          </div>
+          <div>
+            <strong id="photoCount">0</strong>
+            <span>fotos</span>
+          </div>
+          <div>
+            <strong id="favoriteCount">0</strong>
+            <span>favoritos</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="workspace" aria-label="Gestor de recuerdos">
+        <form class="memory-form" id="memoryForm">
+          <div class="section-heading">
+            <p class="eyebrow">Guardar un momento</p>
+            <h2>Añadir al álbum</h2>
+          </div>
+
+          <label>
+            <span>¿Qué momento fue?</span>
+            <input
+              id="titleInput"
+              name="title"
+              type="text"
+              maxlength="72"
+              placeholder="Nuestro primer viaje juntos a Valencia"
+              required
+            />
+          </label>
+
+          <div class="form-grid">
+            <label>
+              <span>Fecha de inicio</span>
+              <input id="startDateInput" name="startDate" type="date" required />
+            </label>
+            <label>
+              <span>Fecha de fin</span>
+              <input id="endDateInput" name="endDate" type="date" required />
+            </label>
+
+          </div>
+
+          <label>
+              <span>Cuéntame qué sucedió...</span>
+            <textarea
+              id="noteInput"
+              name="note"
+              rows="6"
+              maxlength="900"
+              placeholder="Describe cada detalle de ese momento especial que queremos recordar siempre..."
+              required
+            ></textarea>
+          </label>
+
+          <label class="photo-picker" for="photoInput">
+            <input id="photoInput" name="photo" type="file" accept="image/*,video/*" multiple />
+            <span class="photo-icon" aria-hidden="true">+</span>
+            <span>
+              <strong>Añadir fotos o videos (opcional)</strong>
+              <small>JPG, PNG, WebP o MP4 guardado en este navegador</small>
+            </span>
+          </label>
+
+          <div class="preview-container is-hidden" id="previewWrap">
+            <div id="previewList"></div>
+            <button class="ghost-button" id="clearPhotoButton" type="button">
+              Quitar todos
+            </button>
+          </div>
+
+          <button class="primary-button" type="submit">Guardar recuerdo</button>
+        </form>
+
+        <section class="memory-board" aria-label="Recuerdos guardados">
+          <div class="board-toolbar">
+            <div class="section-heading">
+              <p class="eyebrow">Viajes guardados</p>
+              <h2>Viajes</h2>
+            </div>
+            <div class="toolbar-actions">
+              <input
+                id="searchInput"
+                type="search"
+                placeholder="Buscar en nuestros momentos..."
+                aria-label="Buscar recuerdos"
+              />
+              <select id="filterInput" aria-label="Filtrar recuerdos">
+                <option value="all">Todos los momentos</option>
+                <option value="favorites">Los más especiales 💕</option>
+                <option value="photos">Con fotos</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="empty-state" id="emptyState">
+            <h3>Todavía no hay momentos guardados</h3>
+            <p>Añade el primero y comenzaremos a llenar nuestro álbum con los momentos más bellos que hemos compartido.</p>
+          </div>
+
+          <div class="memory-grid" id="memoryGrid"></div>
+        </section>
+      </section>
+    </main>
+
+
+
+    <template id="memoryTemplate">
+      <article class="memory-card" role="button" tabindex="0">
+        <div class="memory-card-image">
+          <div class="card-photo"></div>
+          <div class="memory-overlay">
+            <span class="view-icon">👁️ Ver</span>
+          </div>
+        </div>
+        <div class="memory-card-content">
+          <div class="memory-header">
+            <h3></h3>
+            <span class="memory-date"></span>
+          </div>
+          <p class="memory-note"></p>
+          <div class="memory-meta">
+            <span class="memory-mood"></span>
+            <div class="memory-actions">
+              <button class="favorite-button" type="button" aria-label="Favorito" data-action="favorite">💕</button>
+              <button class="delete-button" type="button" aria-label="Eliminar" data-action="delete">🗑️</button>
+              <button class="add-content-button" type="button" aria-label="Añadir/Editar" data-action="edit">+</button>
+            </div>
+          </div>
+        </div>
+      </article>
+    </template>
+
+    <!-- Modal de detalle del momento -->
+    <div class="memory-modal is-hidden" id="memoryModal" aria-hidden="true">
+      <div class="modal-backdrop"></div>
+      <div class="modal-container">
+        <button class="modal-close" id="modalClose" type="button" aria-label="Cerrar">✕</button>
+        
+        <div class="modal-carousel">
+          <div class="carousel-container" id="carouselContainer"></div>
+          <button class="carousel-nav carousel-prev" id="prevBtn" type="button" aria-label="Anterior">❮</button>
+          <button class="carousel-nav carousel-next" id="nextBtn" type="button" aria-label="Siguiente">❯</button>
+          <div class="carousel-indicators" id="indicators"></div>
+        </div>
+        
+        <div class="modal-details">
+          <div class="modal-header">
+            <div>
+              <h2 id="modalTitle"></h2>
+              <p id="modalDate" class="modal-date"></p>
+              <p id="modalHint" style="display:none"></p>
+            </div>
+            <span id="modalMood" class="modal-mood" style="display:none"></span>
+          </div>
+          
+          <p id="modalNote" class="modal-note"></p>
+          
+        <div class="modal-actions">
+              <button class="modal-favorite" id="modalFavoriteBtn" type="button">Favorito</button>
+            <button class="modal-download" id="modalDownloadBtn" type="button">⬇️ Descargar</button>
+            <button class="modal-edit" id="modalEditBtn" type="button">✏️ Editar</button>
+            <button class="modal-delete" id="modalDeleteBtn" type="button">🗑️ Eliminar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
