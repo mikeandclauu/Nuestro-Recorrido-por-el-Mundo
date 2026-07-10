@@ -111,6 +111,29 @@ function renderAccessQuestion() {
   }
 }
 
+const ACCESS_UNLOCK_KEY = "our-memory-garden-access";
+
+function unlockAccess() {
+  document.body.classList.remove("is-locked");
+  const accessGate = document.querySelector("#accessGate");
+  if (accessGate) accessGate.classList.add("is-hidden");
+  try {
+    sessionStorage.setItem(ACCESS_UNLOCK_KEY, "1");
+  } catch {
+    // ignore
+  }
+}
+
+function restoreAccessIfUnlocked() {
+  try {
+    if (sessionStorage.getItem(ACCESS_UNLOCK_KEY) === "1") {
+      unlockAccess();
+    }
+  } catch {
+    // ignore
+  }
+}
+
 function initAccessGate() {
   const accessGate = document.querySelector("#accessGate");
   const accessForm = document.querySelector("#accessForm");
@@ -118,6 +141,7 @@ function initAccessGate() {
 
   if (!accessForm) return;
 
+  restoreAccessIfUnlocked();
   renderAccessQuestion();
 
   accessForm.addEventListener("submit", (event) => {
@@ -144,8 +168,7 @@ function initAccessGate() {
       return;
     }
 
-    document.body.classList.remove("is-locked");
-    if (accessGate) accessGate.classList.add("is-hidden");
+    unlockAccess();
   });
 }
 

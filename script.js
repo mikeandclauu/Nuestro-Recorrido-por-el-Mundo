@@ -63,27 +63,32 @@ if (window.location.protocol === "file:") {
 if (startDateInput) startDateInput.value = "";
 if (endDateInput) endDateInput.value = "";
 
-firestore.escucharMemorias(
-  async (items) => {
-    const banner = document.querySelector("#firebaseBanner");
-    if (banner) banner.remove();
+try {
+  firestore.escucharMemorias(
+    async (items) => {
+      const banner = document.querySelector("#firebaseBanner");
+      if (banner) banner.remove();
 
-    memories = items;
+      memories = items;
 
-    if (!localMigrationDone && items.length === 0) {
-      localMigrationDone = true;
-      await migrateLocalMemoriesToFirestore();
-    }
+      if (!localMigrationDone && items.length === 0) {
+        localMigrationDone = true;
+        await migrateLocalMemoriesToFirestore();
+      }
 
-    render();
-    updateStats();
-  },
-  (message) => showFirebaseBanner(message)
-);
+      render();
+      updateStats();
+    },
+    (message) => showFirebaseBanner(message)
+  );
+} catch (error) {
+  console.error("Error iniciando Firebase:", error);
+  showFirebaseBanner("No se pudo conectar con Firebase. Revisa las reglas en Firebase Console.");
+}
 
 render();
 
-photoInput.addEventListener("change", async (event) => {
+async function handlePhotoInputChange(event) {
   const files = event.target.files;
   if (!files?.length) return;
 
@@ -97,10 +102,11 @@ photoInput.addEventListener("change", async (event) => {
     });
   }
   renderPreview();
-});
+}
 
 function renderPreview() {
   const previewList = document.querySelector("#previewList");
+  if (!previewList || !previewWrap) return;
   previewList.innerHTML = "";
   
   selectedPhotos.forEach((media, index) => {
@@ -138,85 +144,81 @@ function renderPreview() {
   previewWrap.classList.toggle("is-hidden", selectedPhotos.length === 0);
 }
 
-clearPhotoButton.addEventListener("click", () => {
-  selectedPhotos = [];
-  photoInput.value = "";
-  previewWrap.classList.add("is-hidden");
-  document.querySelector("#previewList").innerHTML = "";
-});
+async function handleMemorySubmit(event) {
+  event.preventDefault();
 
-form.addEventListener("submit", async (event) => {
+  const data = new FormData(form);
 
-    event.preventDefault();
+  const startDate = normalizeDDMMYYYYToISO(data.get("startDate"));
+  const endDate = normalizeDDMMYYYYToISO(data.get("endDate"));
 
-    const data = new FormData(form);
+  const memory = {
+    title: data.get("title").trim(),
+    startDate,
+    endDate,
+    note: data.get("note").trim(),
+    media: [...selectedPhotos],
+    favorite: false,
+    createdAt: Date.now()
+  };
 
-    let startDate = normalizeDDMMYYYYToISO(data.get("startDate"));
-    let endDate = normalizeDDMMYYYYToISO(data.get("endDate"));
+  const submitBtn = form.querySelector(".primary-button");
+  if (submitBtn) submitBtn.disabled = true;
 
-    const memory = {
-
-        title: data.get("title").trim(),
-
-        startDate,
-
-        endDate,
-
-        note: data.get("note").trim(),
-
-        media: [...selectedPhotos],
-
-        favorite: false,
-
-        createdAt: Date.now()
-
-    };
-
-    const submitBtn = document.querySelector("#memoryForm .primary-button");
-    if (submitBtn) submitBtn.disabled = true;
-
-    try {
-        if (editingMemoryId) {
-            memory.firebaseId = editingMemoryId;
-            await firestore.actualizarMemoria(memory);
-        } else {
-            await firestore.guardarMemoria(memory);
-        }
-    } catch (error) {
-        console.error("Error guardando momento:", error);
-        alert(error.userMessage || formatSaveError(error));
-        if (submitBtn) submitBtn.disabled = false;
-        return;
+  try {
+    if (editingMemoryId) {
+      memory.firebaseId = editingMemoryId;
+      await firestore.actualizarMemoria(memory);
+    } else {
+      await firestore.guardarMemoria(memory);
     }
-
+  } catch (error) {
+    console.error("Error guardando momento:", error);
+    alert(error.userMessage || formatSaveError(error));
     if (submitBtn) submitBtn.disabled = false;
+    return;
+  }
 
-    editingMemoryId = null;
+  if (submitBtn) {
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Guardar recuerdo";
+  }
 
-    const submitBtn = document.querySelector("#memoryForm .primary-button");
-    if (submitBtn) submitBtn.textContent = "Guardar recuerdo";
+  editingMemoryId = null;
+  form.reset();
+  selectedPhotos = [];
+  renderPreview();
+}
 
-    form.reset();
+if (form) form.addEventListener("submit", handleMemorySubmit);
 
+if (photoInput) photoInput.addEventListener("change", handlePhotoInputChange);
+
+if (clearPhotoButton) {
+  clearPhotoButton.addEventListener("click", () => {
     selectedPhotos = [];
+    if (photoInput) photoInput.value = "";
+    if (previewWrap) previewWrap.classList.add("is-hidden");
+    const previewList = document.querySelector("#previewList");
+    if (previewList) previewList.innerHTML = "";
+  });
+}
 
-    renderPreview();
-
-});
-
-searchInput.addEventListener("input", render);
-filterInput.addEventListener("change", render);
+if (searchInput) searchInput.addEventListener("input", render);
+if (filterInput) filterInput.addEventListener("change", render);
 
 // Modal handlers
-modalClose.addEventListener("click", closeModal);
-memoryModal.addEventListener("click", (e) => {
-  if (e.target === memoryModal) closeModal();
-});
+if (modalClose) modalClose.addEventListener("click", closeModal);
+if (memoryModal) {
+  memoryModal.addEventListener("click", (e) => {
+    if (e.target === memoryModal) closeModal();
+  });
+}
 
-prevBtn.addEventListener("click", () => navigateCarousel(-1));
-nextBtn.addEventListener("click", () => navigateCarousel(1));
+if (prevBtn) prevBtn.addEventListener("click", () => navigateCarousel(-1));
+if (nextBtn) nextBtn.addEventListener("click", () => navigateCarousel(1));
 
-modalFavoriteBtn.addEventListener("click", async () => {
+if (modalFavoriteBtn) modalFavoriteBtn.addEventListener("click", async () => {
   const memory = memories.find((m) => m.id === currentMemoryId);
   if (!memory) return;
   memory.favorite = !memory.favorite;
