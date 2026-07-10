@@ -6,74 +6,6 @@ const STORAGE_BACKUP_KEY = "our-memory-garden-backup-v3";
 const DB_NAME = "our-memory-garden-db";
 const DB_STORE = "memories";
 
-
-const ACCESS_QUESTIONS = [
-  {
-    question: "¿Cual fue la primera película que vimos juntos el 31 de Mayo en casa de Olivia?",
-    answers: ["Teen Beach Movie"],
-    looseAnswers: ["teenbeachmovie", "teenbeach"],
-  },
-  {
-    question: "¿De qué color fue el primer ramo de flores que te dí el 6 de Junio?",
-    answers: ["Rosa"],
-    looseAnswers: ["rosa"],
-  },
-  {
-    question: "¿Para qué me escribiste la primera vez que empezamos a hablar?",
-    answers: ["El trabajo de lógica", "El trabajo de lógica borrosa", "El trabajo de Arturo"],
-    looseAnswers: ["trabajodelogica", "trabajodelogicaborrosa", "trabajodearturo"],
-    customCheck: (answer) =>
-      answer.includes("trabajo") && (answer.includes("logica") || answer.includes("arturo")),
-  },
-  {
-    question: "¿Cuál es nuestro parque de confianza?",
-    answers: ["Parque Juan Carlos I"],
-    looseAnswers: [
-      "parquejuancarlosi",
-      "parquejuancarlos1",
-      "parquejuancarlosprimero",
-      "juancarlosi",
-      "juancarlos1",
-      "juancarlos",
-    ],
-    customCheck: (answer, looseAnswer) =>
-      answer.includes("parque") && looseAnswer.includes("juancarlos"),
-  },
-  {
-    question: "¿Cómo se llama nuestro sushi?",
-    answers: ["Sushi Tao", "Tao", "Buffet Tao"],
-    looseAnswers: ["sushitao", "tao", "buffettao"],
-    customCheck: (answer) => answer.includes("tao"),
-  },
-  {
-    question: '¿Cómo se llama la doctora en "A dos metros de ti"?',
-    answers: ["Bárbara"],
-    looseAnswers: ["barbara"],
-  },
-  {
-    question: "¿Qué dia empezamos a salir?",
-    answers: ["El 12 de Julio"],
-    looseAnswers: ["12dejulio", "el12dejulio", "1207", "127"],
-    customCheck: (answer, looseAnswer) =>
-      (answer.includes("12") && answer.includes("julio")) ||
-      looseAnswer.includes("1207") ||
-      looseAnswer.includes("127"),
-  },
-  {
-    question: "¿A dónde fue nuestro primer viaje juntos?",
-    answers: ["A Valencia"],
-    looseAnswers: ["valencia", "avalencia"],
-    customCheck: (answer) => answer.includes("valencia"),
-  },
-];
-
-const accessGate = document.querySelector("#accessGate");
-const accessForm = document.querySelector("#accessForm");
-const accessQuestions = document.querySelector("#accessQuestions");
-const accessQuestionText = document.querySelector("#accessQuestionText");
-const accessAnswerInput = document.querySelector("#accessAnswerInput");
-const accessProgress = document.querySelector("#accessProgress");
-const accessError = document.querySelector("#accessError");
 const form = document.querySelector("#memoryForm");
 const grid = document.querySelector("#memoryGrid");
 const template = document.querySelector("#memoryTemplate");
@@ -107,7 +39,6 @@ const modalEditBtn = document.querySelector("#modalEditBtn");
 let memories = [];
 let localMigrationDone = false;
 let selectedPhotos = [];
-let currentAccessQuestion = 0;
 let currentMemoryId = null;
 let currentCarouselIndex = 0;
 
@@ -129,9 +60,8 @@ if (window.location.protocol === "file:") {
   );
 }
 
-renderAccessQuestion();
-startDateInput.value = "";
-endDateInput.value = "";
+if (startDateInput) startDateInput.value = "";
+if (endDateInput) endDateInput.value = "";
 
 firestore.escucharMemorias(
   async (items) => {
@@ -152,32 +82,6 @@ firestore.escucharMemorias(
 );
 
 render();
-
-accessForm.addEventListener("submit", (event) => {
-  event.preventDefault();
-  const data = new FormData(accessForm);
-  const question = ACCESS_QUESTIONS[currentAccessQuestion];
-  const isCorrect = isAccessAnswerCorrect(question, data.get("access-answer"));
-
-  if (!isCorrect) {
-    accessError.textContent = "Alguna respuesta no es correcta. Inténtalo otra vez.";
-    accessForm.classList.add("has-error");
-    setTimeout(() => accessForm.classList.remove("has-error"), 280);
-    return;
-  }
-
-  currentAccessQuestion += 1;
-  accessError.textContent = "";
-  accessForm.reset();
-
-  if (currentAccessQuestion < ACCESS_QUESTIONS.length) {
-    renderAccessQuestion();
-    return;
-  }
-
-  document.body.classList.remove("is-locked");
-  accessGate.classList.add("is-hidden");
-});
 
 photoInput.addEventListener("change", async (event) => {
   const files = event.target.files;
@@ -546,40 +450,6 @@ function updateStats() {
   document.querySelector("#favoriteCount").textContent = memories.filter((item) => item.favorite).length;
 }
 
-function renderAccessQuestion() {
-  const item = ACCESS_QUESTIONS[currentAccessQuestion];
-  if (!item) return;
-
-  accessProgress.textContent = `Pregunta ${currentAccessQuestion + 1} de ${ACCESS_QUESTIONS.length}`;
-
-  if (accessQuestionText) {
-    accessQuestionText.textContent = item.question;
-  }
-
-  if (accessAnswerInput) {
-    accessAnswerInput.value = "";
-    accessAnswerInput.placeholder = "Escribe tu respuesta...";
-    accessAnswerInput.focus();
-    return;
-  }
-
-  accessQuestions.replaceChildren();
-  const label = document.createElement("label");
-  const span = document.createElement("span");
-  const input = document.createElement("input");
-
-  span.textContent = item.question;
-  input.name = "access-answer";
-  input.type = "text";
-  input.autocomplete = "off";
-  input.required = true;
-  input.placeholder = "Escribe tu respuesta...";
-
-  label.append(span, input);
-  accessQuestions.appendChild(label);
-  input.focus();
-}
-
 function readFileAsDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -767,35 +637,6 @@ function saveMemories() {
 
 
 
-
-function normalizeAnswer(value) {
-  return String(value || "")
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
-}
-
-function normalizeLooseAnswer(value) {
-  return normalizeAnswer(value).replace(/[^a-z0-9]/g, "");
-}
-
-function isAccessAnswerCorrect(question, value) {
-  const answer = normalizeAnswer(value);
-  const looseAnswer = normalizeLooseAnswer(value);
-  const matchesExact = question.answers.some((validAnswer) => normalizeAnswer(validAnswer) === answer);
-  const matchesLoose = (question.looseAnswers || []).some((validAnswer) => {
-    const normalizedValidAnswer = normalizeLooseAnswer(validAnswer);
-    return (
-      looseAnswer === normalizedValidAnswer ||
-      looseAnswer.includes(normalizedValidAnswer) ||
-      normalizedValidAnswer.includes(looseAnswer)
-    );
-  });
-  const matchesCustom = question.customCheck ? question.customCheck(answer, looseAnswer) : false;
-
-  return matchesExact || matchesLoose || matchesCustom;
-}
 
 function isMemory(item) {
   // Compatibilidad hacia atrás con el formato antiguo (date/photo/mood)
