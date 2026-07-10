@@ -102,6 +102,7 @@ async function handlePhotoInputChange(event) {
     });
   }
   renderPreview();
+  event.target.value = "";
 }
 
 function renderPreview() {

@@ -42,27 +42,59 @@ function extensionForMedia(item) {
 }
 
 async function compressImageBlob(blob, maxDimension, quality) {
-    if (!blob.type.startsWith("image/") || blob.type === "image/gif") {
+    if (blob.type === "image/gif") {
         return blob;
     }
 
+    const drawToCanvas = async () => {
+        if (typeof createImageBitmap === "function") {
+            try {
+                const bitmap = await createImageBitmap(blob);
+                const scale = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height));
+                const width = Math.max(1, Math.round(bitmap.width * scale));
+                const height = Math.max(1, Math.round(bitmap.height * scale));
+
+                const canvas = document.createElement("canvas");
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(bitmap, 0, 0, width, height);
+                bitmap.close();
+                return canvas;
+            } catch {
+                // fallback below
+            }
+        }
+
+        const objectUrl = URL.createObjectURL(blob);
+        try {
+            const img = await new Promise((resolve, reject) => {
+                const image = new Image();
+                image.onload = () => resolve(image);
+                image.onerror = reject;
+                image.src = objectUrl;
+            });
+
+            const scale = Math.min(1, maxDimension / Math.max(img.width, img.height));
+            const width = Math.max(1, Math.round(img.width * scale));
+            const height = Math.max(1, Math.round(img.height * scale));
+
+            const canvas = document.createElement("canvas");
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0, width, height);
+            return canvas;
+        } finally {
+            URL.revokeObjectURL(objectUrl);
+        }
+    };
+
     try {
-        const bitmap = await createImageBitmap(blob);
-        const scale = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height));
-        const width = Math.round(bitmap.width * scale);
-        const height = Math.round(bitmap.height * scale);
-
-        const canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(bitmap, 0, 0, width, height);
-        bitmap.close();
-
+        const canvas = await drawToCanvas();
         const compressed = await new Promise((resolve) => {
             canvas.toBlob(resolve, "image/jpeg", quality);
         });
-
         return compressed || blob;
     } catch {
         return blob;
@@ -127,7 +159,8 @@ async function inlineWithBudget(items) {
     const attempts = [
         { dimension: 640, quality: 0.42 },
         { dimension: 520, quality: 0.35 },
-        { dimension: 420, quality: 0.28 }
+        { dimension: 420, quality: 0.28 },
+        { dimension: 320, quality: 0.22 }
     ];
 
     for (const attempt of attempts) {
@@ -187,6 +220,11 @@ export async function prepareMediaForSave(mediaItems, memoryId) {
                     "Los vídeos necesitan Firebase Storage. Actívalo en Firebase Console → Storage → Get started, y publica las reglas de storage.rules."
                 );
             }
+            continue;
+        }
+
+        if (item.file instanceof Blob) {
+            pendingInline.push(item);
             continue;
         }
 

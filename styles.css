@@ -568,6 +568,7 @@ textarea:focus {
 }
 
 .photo-picker {
+  position: relative;
   grid-template-columns: 46px minmax(0, 1fr);
   align-items: center;
   min-height: 76px;
@@ -581,10 +582,11 @@ textarea:focus {
 .photo-picker input,
 .import-button input {
   position: absolute;
-  width: 1px;
-  height: 1px;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   opacity: 0;
-  pointer-events: none;
+  cursor: pointer;
 }
 
 .photo-icon {
