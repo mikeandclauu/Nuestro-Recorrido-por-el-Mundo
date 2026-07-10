@@ -52,7 +52,19 @@
               Solo tú (y yo) sabemos las respuestas a estas preguntas. ¡Adelante!
             </p>
             <div class="access-progress" id="accessProgress"></div>
-            <div class="access-questions" id="accessQuestions"></div>
+            <div class="access-questions" id="accessQuestions">
+              <label for="accessAnswerInput">
+                <span id="accessQuestionText">Cargando pregunta...</span>
+                <input
+                  id="accessAnswerInput"
+                  name="access-answer"
+                  type="text"
+                  autocomplete="off"
+                  required
+                  placeholder="Escribe tu respuesta..."
+                />
+              </label>
+            </div>
             <p class="access-error" id="accessError" role="alert" aria-live="polite"></p>
             <button class="primary-button" type="submit">Verificar respuesta</button>
           </div>

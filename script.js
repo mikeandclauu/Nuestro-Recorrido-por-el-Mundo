@@ -70,6 +70,8 @@ const ACCESS_QUESTIONS = [
 const accessGate = document.querySelector("#accessGate");
 const accessForm = document.querySelector("#accessForm");
 const accessQuestions = document.querySelector("#accessQuestions");
+const accessQuestionText = document.querySelector("#accessQuestionText");
+const accessAnswerInput = document.querySelector("#accessAnswerInput");
 const accessProgress = document.querySelector("#accessProgress");
 const accessError = document.querySelector("#accessError");
 const form = document.querySelector("#memoryForm");
@@ -104,6 +106,10 @@ const modalEditBtn = document.querySelector("#modalEditBtn");
 
 let memories = [];
 let localMigrationDone = false;
+let selectedPhotos = [];
+let currentAccessQuestion = 0;
+let currentMemoryId = null;
+let currentCarouselIndex = 0;
 
 function showFirebaseBanner(message) {
   let banner = document.querySelector("#firebaseBanner");
@@ -122,6 +128,10 @@ if (window.location.protocol === "file:") {
     "Abre la web con un servidor local (no como archivo). En la carpeta del proyecto: python -m http.server 8765 y entra en http://localhost:8765"
   );
 }
+
+renderAccessQuestion();
+startDateInput.value = "";
+endDateInput.value = "";
 
 firestore.escucharMemorias(
   async (items) => {
@@ -142,17 +152,6 @@ firestore.escucharMemorias(
 );
 
 render();
-
-let selectedPhotos = [];
-let currentAccessQuestion = 0;
-let currentMemoryId = null;
-let currentCarouselIndex = 0;
-
-renderAccessQuestion();
-startDateInput.value = "";
-endDateInput.value = "";
-render();
-
 
 accessForm.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -182,9 +181,8 @@ accessForm.addEventListener("submit", (event) => {
 
 photoInput.addEventListener("change", async (event) => {
   const files = event.target.files;
-  if (!files) return;
+  if (!files?.length) return;
 
-  selectedPhotos = [];
   for (const file of files) {
     const dataUrl = await readFileAsDataUrl(file);
     selectedPhotos.push({
@@ -549,18 +547,33 @@ function updateStats() {
 }
 
 function renderAccessQuestion() {
-  accessQuestions.replaceChildren();
   const item = ACCESS_QUESTIONS[currentAccessQuestion];
+  if (!item) return;
+
+  accessProgress.textContent = `Pregunta ${currentAccessQuestion + 1} de ${ACCESS_QUESTIONS.length}`;
+
+  if (accessQuestionText) {
+    accessQuestionText.textContent = item.question;
+  }
+
+  if (accessAnswerInput) {
+    accessAnswerInput.value = "";
+    accessAnswerInput.placeholder = "Escribe tu respuesta...";
+    accessAnswerInput.focus();
+    return;
+  }
+
+  accessQuestions.replaceChildren();
   const label = document.createElement("label");
   const span = document.createElement("span");
   const input = document.createElement("input");
 
-  accessProgress.textContent = `Pregunta ${currentAccessQuestion + 1} de ${ACCESS_QUESTIONS.length}`;
   span.textContent = item.question;
   input.name = "access-answer";
   input.type = "text";
   input.autocomplete = "off";
   input.required = true;
+  input.placeholder = "Escribe tu respuesta...";
 
   label.append(span, input);
   accessQuestions.appendChild(label);

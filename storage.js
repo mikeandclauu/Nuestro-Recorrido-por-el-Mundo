@@ -8,10 +8,11 @@ import {
 } from "./firebase.js";
 
 const MAX_IMAGE_DIMENSION = 1920;
-const INLINE_IMAGE_DIMENSION = 800;
+const INLINE_IMAGE_DIMENSION = 640;
 const JPEG_QUALITY = 0.85;
-const INLINE_JPEG_QUALITY = 0.55;
-const MAX_INLINE_DOC_BYTES = 900_000;
+const INLINE_JPEG_QUALITY = 0.42;
+const MAX_INLINE_DOC_BYTES = 980_000;
+const MAX_INLINE_PHOTOS = 20;
 
 function dataUrlToBlob(dataUrl) {
     const [header, base64] = dataUrl.split(",");
@@ -105,9 +106,12 @@ async function uploadMediaItem(item, memoryId, index) {
     return { type: item.type, url, name: item.name || safeName };
 }
 
-async function inlineMediaItem(item) {
+async function inlineMediaItem(item, dimension = INLINE_IMAGE_DIMENSION, quality = INLINE_JPEG_QUALITY) {
     const blob = await mediaItemToBlob(item, true);
-    const data = await blobToDataUrl(blob);
+    const compressed = item.type === "image"
+        ? await compressImageBlob(blob, dimension, quality)
+        : blob;
+    const data = await blobToDataUrl(compressed);
     return { type: item.type, data, name: item.name || "foto.jpg" };
 }
 
@@ -119,7 +123,30 @@ function estimateInlineSize(prepared) {
     }, 0);
 }
 
+async function inlineWithBudget(items) {
+    const attempts = [
+        { dimension: 640, quality: 0.42 },
+        { dimension: 520, quality: 0.35 },
+        { dimension: 420, quality: 0.28 }
+    ];
+
+    for (const attempt of attempts) {
+        const prepared = [];
+        for (const item of items) {
+            prepared.push(await inlineMediaItem(item, attempt.dimension, attempt.quality));
+        }
+        if (estimateInlineSize(prepared) <= MAX_INLINE_DOC_BYTES) {
+            return prepared;
+        }
+    }
+
+    throw new Error(
+        `Demasiadas fotos para guardar de una vez (máximo recomendado: ${MAX_INLINE_PHOTOS}). Activa Firebase Storage para subir más.`
+    );
+}
+
 export async function prepareMediaForSave(mediaItems, memoryId) {
+    const pendingInline = [];
     const prepared = [];
 
     for (let i = 0; i < mediaItems.length; i++) {
@@ -150,12 +177,27 @@ export async function prepareMediaForSave(mediaItems, memoryId) {
             continue;
         }
 
-        prepared.push(await inlineMediaItem(item));
+        try {
+            const uploaded = await uploadMediaItem(item, memoryId, i);
+            prepared.push(uploaded);
+        } catch {
+            pendingInline.push(item);
+        }
+    }
+
+    if (pendingInline.length) {
+        if (pendingInline.length > MAX_INLINE_PHOTOS) {
+            throw new Error(
+                `Puedes guardar hasta ${MAX_INLINE_PHOTOS} fotos sin Storage. Activa Firebase Storage para más.`
+            );
+        }
+        const inlinePrepared = await inlineWithBudget(pendingInline);
+        prepared.push(...inlinePrepared);
     }
 
     if (estimateInlineSize(prepared) > MAX_INLINE_DOC_BYTES) {
         throw new Error(
-            "Las fotos ocupan demasiado. Prueba con menos fotos o fotos más pequeñas (máximo ~3 por momento)."
+            "Las fotos ocupan demasiado. Activa Firebase Storage o prueba con menos fotos."
         );
     }
 
